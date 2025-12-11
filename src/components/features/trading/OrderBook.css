@@ -1,0 +1,447 @@
+.ob {
+  width: 38%;
+  min-width: 400px;
+  font-size: 11px;
+  border: 1px solid #333;
+  overflow: hidden;
+  max-height: 100%;
+  flex-shrink: 1;
+}
+
+.ob .ob-buy {
+  display: inline-table;
+  width: 50%;
+  color: #f7fffb;
+  overflow: hidden;
+}
+
+.ob .ob-sell {
+  display: inline-table;
+  width: 50%;
+  color: #fff7f7;
+  overflow: hidden;
+}
+
+.ob .item {
+  position: relative;
+  display: table;
+  width: 100%;
+}
+
+/*.ob .item.header {
+  padding-bottom: 10px;
+}*/
+
+.ob .header {
+  border-bottom: 1px solid #333;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.ob .header .balance-buy {
+  text-align: right;
+  color: #53b987;
+  flex: 1;
+  padding-right: 10px;
+  position: relative;
+}
+
+.ob .header .balance-sell {
+  color: #b95353;
+  flex: 1;
+  padding-left: 10px;
+  text-align: left;
+}
+
+.ob .header .balance-buy .info {
+  margin-left: 15px;
+}
+
+.ob .header .balance-sell .info {
+  margin-right: 15px;
+}
+
+.ob .header .balance-buy .info.bnb {
+  margin-left: 0;
+  float: left;
+}
+
+.ob .header .balance-sell .info.bnb {
+  margin-right: 0;
+  float: right;
+}
+
+.ob .item .columns {
+  position: relative;
+  display: table-row;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.item .columns .bar {
+  position: absolute;
+  top: 0;
+  content: "";
+  opacity: 0.5;
+  height: 100%;
+  max-width: 100%;
+}
+
+.item .columns .my-order {
+  display: block;
+  position: absolute;
+  top: 3px;
+  content: "";
+  border-width: 0 3px 3px 0 !important;
+  display: inline-block;
+  padding: 3px;
+}
+
+.item .columns .my-order.right {
+  left: 0;
+  border: solid #9decc4;
+  transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+}
+
+.item .columns .my-order.left {
+  right: 0;
+  border: solid #f1a2a2;
+  transform: rotate(135deg);
+  -webkit-transform: rotate(135deg);
+}
+
+.ob-buy .columns .bar {
+  background-color: #53b987;
+  right: 0;
+}
+
+.ob-buy .columns .column-price .price {
+  margin-right: 2px;
+}
+
+.ob-sell .columns .column-price .price {
+  margin-left: 2px;
+}
+
+.ob-sell .columns .bar {
+  background-color: #b95353;
+  left: 0;
+}
+
+.ob .columns .column {
+  display: table-cell;
+  width: 33%;
+}
+
+.ob-buy .columns .column {
+  text-align: right;
+}
+
+.ob-buy .columns .column .quantity {
+  text-align: left;
+  display: block;
+  margin-left: 10px;
+}
+
+.ob-buy .columns .column.column-quantity-total {
+  text-align: right;
+}
+
+.ob-sell .columns .column.column-quantity-total {
+  text-align: left;
+}
+
+.ob-sell .columns .column {
+  text-align: left;
+}
+
+.ob-sell .columns .column .quantity {
+  text-align: right;
+  display: block;
+  margin-right: 10px;
+}
+
+
+.order-book .buttons {
+  width: auto;
+  min-width: 50px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.order-book .buttons .accuracy-percent {
+  color: #c6fce1;
+  background-color: #53b987;
+  display: inline-block;
+  width: 30px;
+  height: 22px;
+  text-align: center;
+  border: 1px solid #9decc4;
+  margin: 0 2px;
+  caret-color: red;
+  box-sizing: border-box;
+}
+
+.order-book .buttons .button {
+  color: #c6fce1;
+  background-color: #53b987;
+  border: 1px solid #9decc4;
+  font-family: monospace;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.led-red {
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 10px;
+  height: 10px;
+  margin-left: 10px;
+  background-color: #f00;
+  border-radius: 50%;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px,
+    rgba(255, 0, 0, 0.5) 0 2px 12px;
+  -webkit-animation: blinkRed 1s infinite;
+  -moz-animation: blinkRed 1s infinite;
+  -ms-animation: blinkRed 1s infinite;
+  -o-animation: blinkRed 1s infinite;
+  animation: blinkRed 1s infinite;
+}
+
+.settings {
+  direction: ltr;
+  width: 100%;
+}
+
+.settings .option,
+.settings .value {
+  padding: 5px 10px;
+  width: 49%;
+}
+
+.settings .throttle,
+.settings .timeout {
+  width: 40px;
+  height: 25px;
+  border-radius: 2px;
+  text-align-last: center;
+}
+
+.settings .throttle {
+  height: 15px;
+}
+
+.settings .value {
+  text-align: center;
+}
+
+@-webkit-keyframes blinkRed {
+  from {
+    background-color: #f00;
+  }
+
+  50% {
+    background-color: #a00;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px,
+      rgba(255, 0, 0, 0.5) 0 0 0;
+  }
+
+  to {
+    background-color: #f00;
+  }
+}
+
+@-moz-keyframes blinkRed {
+  from {
+    background-color: #f00;
+  }
+
+  50% {
+    background-color: #a00;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px,
+      rgba(255, 0, 0, 0.5) 0 0 0;
+  }
+
+  to {
+    background-color: #f00;
+  }
+}
+
+@-ms-keyframes blinkRed {
+  from {
+    background-color: #f00;
+  }
+
+  50% {
+    background-color: #a00;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px,
+      rgba(255, 0, 0, 0.5) 0 0 0;
+  }
+
+  to {
+    background-color: #f00;
+  }
+}
+
+@-o-keyframes blinkRed {
+  from {
+    background-color: #f00;
+  }
+
+  50% {
+    background-color: #a00;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px,
+      rgba(255, 0, 0, 0.5) 0 0 0;
+  }
+
+  to {
+    background-color: #f00;
+  }
+}
+
+@keyframes blinkRed {
+  from {
+    background-color: #f00;
+  }
+
+  50% {
+    background-color: #a00;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px,
+      rgba(255, 0, 0, 0.5) 0 0 0;
+  }
+
+  to {
+    background-color: #f00;
+  }
+}
+
+.led-yellow {
+  margin: 0 auto;
+  width: 24px;
+  height: 24px;
+  background-color: #ff0;
+  border-radius: 50%;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #808002 0 -1px 9px,
+    #ff0 0 2px 12px;
+  -webkit-animation: blinkYellow 1s infinite;
+  -moz-animation: blinkYellow 1s infinite;
+  -ms-animation: blinkYellow 1s infinite;
+  -o-animation: blinkYellow 1s infinite;
+  animation: blinkYellow 1s infinite;
+}
+
+@-webkit-keyframes blinkYellow {
+  from {
+    background-color: #ff0;
+  }
+
+  50% {
+    background-color: #aa0;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #808002 0 -1px 9px,
+      #ff0 0 2px 0;
+  }
+
+  to {
+    background-color: #ff0;
+  }
+}
+
+@-moz-keyframes blinkYellow {
+  from {
+    background-color: #ff0;
+  }
+
+  50% {
+    background-color: #aa0;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #808002 0 -1px 9px,
+      #ff0 0 2px 0;
+  }
+
+  to {
+    background-color: #ff0;
+  }
+}
+
+@-ms-keyframes blinkYellow {
+  from {
+    background-color: #ff0;
+  }
+
+  50% {
+    background-color: #aa0;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #808002 0 -1px 9px,
+      #ff0 0 2px 0;
+  }
+
+  to {
+    background-color: #ff0;
+  }
+}
+
+@-o-keyframes blinkYellow {
+  from {
+    background-color: #ff0;
+  }
+
+  50% {
+    background-color: #aa0;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #808002 0 -1px 9px,
+      #ff0 0 2px 0;
+  }
+
+  to {
+    background-color: #ff0;
+  }
+}
+
+@keyframes blinkYellow {
+  from {
+    background-color: #ff0;
+  }
+
+  50% {
+    background-color: #aa0;
+    box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #808002 0 -1px 9px,
+      #ff0 0 2px 0;
+  }
+
+  to {
+    background-color: #ff0;
+  }
+}
+
+.led-green {
+  float: left;
+  margin-left: 10px;
+  width: 10px;
+  height: 10px;
+  background-color: #abff00;
+  border-radius: 50%;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #304701 0 -1px 9px,
+    #89ff00 0 0 12px;
+}
+
+.led-blue {
+  margin: 0 auto;
+  width: 24px;
+  height: 24px;
+  background-color: #24e0ff;
+  border-radius: 50%;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #006 0 -1px 9px,
+    #3f8cff 0 2px 14px;
+}

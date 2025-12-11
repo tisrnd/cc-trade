@@ -1,0 +1,527 @@
+.info-panel::-webkit-scrollbar-track {
+  background-color: #333;
+}
+
+.info-panel::-webkit-scrollbar {
+  width: 6px;
+  background-color: #333;
+}
+
+.info-panel::-webkit-scrollbar-thumb {
+  background-color: #000000;
+}
+
+.info-panel {
+  width: 29%;
+  color: white;
+  font-size: 11px;
+  max-height: 100%;
+  overflow-y: auto;
+  direction: ltr;
+  border-top: 1px solid #333;
+  flex-shrink: 1;
+}
+
+.info-panel .header {
+  direction: rtl;
+  border: 0;
+  border-bottom: 1px solid #333;
+  display: flex;
+}
+
+.info-panel .header .item {
+  border-right: 1px solid #333;
+  display: block;
+  padding: 2px 10px;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+}
+
+.info-panel .header .item.selected {
+  background-color: #333;
+}
+
+.info-panel .feed .header {
+  direction: ltr;
+  border-right: 1px solid #333;
+  display: flex;
+}
+
+.info-panel .feed .header .item {
+  cursor: inherit;
+  padding: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.info-panel .feed .header .item:last-child {
+  border: 0;
+}
+
+.info-panel .feed .entity {
+  display: flex;
+  width: 100%;
+}
+
+.info-panel .feed .entity .piece {
+  flex: 1;
+  display: block;
+  text-align: center;
+  border-bottom: 1px solid #333;
+  border-right: 1px solid #333;
+  width: auto;
+}
+
+.info-panel .feed .entity .piece.full {
+  width: 100%;
+}
+
+.info-panel .feed .entity .piece:last-child {
+  border-right: 0;
+}
+
+.info-panel .feed .entity .piece-3x {
+  flex: 1;
+  display: block;
+  text-align: center;
+  border-bottom: 1px solid #333;
+  border-right: 1px solid #333;
+}
+
+.info-panel .feed .entity .piece-3x:last-child {
+  border-right: 0;
+}
+
+.info-panel .trade {
+  width: 100%;
+}
+
+.info-panel .trade:hover {
+  opacity: 0.4 !important;
+}
+
+.info-panel .trade .piece {
+  border-bottom: 1px solid #333;
+  width: 20%;
+  cursor: pointer;
+}
+
+.info-panel .trade .piece:last-child {
+  width: 25%;
+}
+
+.info-panel .trade.red {
+  background-color: #5c2929;
+}
+
+.info-panel .trade.green {
+  background-color: #295c43;
+}
+
+.info-panel .order-main {
+  position: relative;
+  font-family: sans-serif;
+}
+
+.info-panel .cancel-order-stub {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  text-align: center;
+  width: 8%;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.info-panel .cancel-order-stub:hover {
+  opacity: 0.4;
+}
+
+.trade .piece.cancel-order {
+  width: 8%;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+/* Orders Card-Based Layout */
+.orders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.order-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid;
+  background: linear-gradient(135deg, rgba(30, 35, 45, 0.9), rgba(25, 30, 40, 0.95));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.order-card:hover {
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.order-card.buy {
+  border-left-color: #26a69a;
+  background: linear-gradient(135deg, rgba(38, 166, 154, 0.1), rgba(25, 30, 40, 0.95));
+}
+
+.order-card.sell {
+  border-left-color: #ef5350;
+  background: linear-gradient(135deg, rgba(239, 83, 80, 0.1), rgba(25, 30, 40, 0.95));
+}
+
+.order-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-card-side {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.order-card-side.buy {
+  background: rgba(38, 166, 154, 0.25);
+  color: #26a69a;
+}
+
+.order-card-side.sell {
+  background: rgba(239, 83, 80, 0.25);
+  color: #ef5350;
+}
+
+.order-card-symbol {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c6fce1;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.order-card-symbol:hover {
+  color: #53b987;
+}
+
+.order-card-cancel {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.15s ease;
+}
+
+.order-card-cancel:hover {
+  color: #ef5350;
+}
+
+.order-card-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-card-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.order-card-price {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.order-card-total {
+  font-size: 11px;
+  color: rgba(198, 252, 225, 0.6);
+}
+
+.order-card-time {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.pnl-container {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pnl-period-selector {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  background: #1a1a1a;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.pnl-period-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pnl-period-btn:hover {
+  background: #2a2a2a;
+  color: #c6fce1;
+}
+
+.pnl-period-btn.active {
+  background: linear-gradient(135deg, #26a69a 0%, #1e8a7e 100%);
+  color: #fff;
+  font-weight: 500;
+}
+
+.pnl-time-label {
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pnl-main-value {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 16px 0;
+  background: linear-gradient(180deg, rgba(38, 166, 154, 0.1) 0%, transparent 100%);
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+.pnl-sign {
+  font-size: 20px;
+  margin-right: 2px;
+}
+
+.pnl-currency {
+  font-size: 14px;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.pnl-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 6px;
+}
+
+.pnl-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pnl-stat-label {
+  font-size: 9px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pnl-stat-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+.pnl-stat-value.green {
+  color: #26a69a;
+}
+
+.pnl-stat-value.red {
+  color: #ef5350;
+}
+
+.pnl-by-symbol {
+  background: #1a1a1a;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.pnl-section-title {
+  font-size: 9px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #333;
+}
+
+.pnl-symbol-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 11px;
+}
+
+.pnl-symbol-name {
+  color: #c6fce1;
+  font-weight: 500;
+}
+
+.pnl-symbol-value {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  font-weight: 600;
+}
+
+.pnl-symbol-value.green {
+  color: #26a69a;
+}
+
+.pnl-symbol-value.red {
+  color: #ef5350;
+}
+
+.pnl-reset-btn {
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pnl-reset-btn:hover {
+  background: rgba(239, 83, 80, 0.1);
+  border-color: #ef5350;
+  color: #ef5350;
+}
+
+.pnl-reset-btn.primary {
+  background: rgba(38, 166, 154, 0.15);
+  border-color: #26a69a;
+  color: #26a69a;
+}
+
+.pnl-reset-btn.primary:hover {
+  background: rgba(38, 166, 154, 0.25);
+}
+
+.pnl-percent {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+.pnl-btc-section {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.pnl-btc-value {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.pnl-btc-value .pnl-currency {
+  color: #f7931a;
+}
+
+.pnl-btc-percent {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+.pnl-stats.btc {
+  margin-top: 8px;
+  border-top: 1px dashed #333;
+  padding-top: 8px;
+}
+
+.pnl-stat-value.btc {
+  color: #f7931a;
+}
+
+.pnl-no-snapshot {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.pnl-current-value {
+  font-size: 18px;
+  color: #c6fce1;
+  margin-bottom: 8px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  text-align: center;
+}
+
+.pnl-current-value.btc {
+  font-size: 14px;
+  color: #f7931a;
+  margin-bottom: 12px;
+}
+
+.pnl-current-value .usdt {
+  color: #26a69a;
+  font-size: 12px;
+}
+
+.pnl-current-value .btc {
+  color: #f7931a;
+  font-size: 11px;
+}
+
+.pnl-hint {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.pnl-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 13px;
+}

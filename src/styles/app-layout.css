@@ -1,0 +1,171 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.root-container {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.root-container .chart {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chart-wrapper-container {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.root-container .side {
+  width: 18%;
+}
+
+/* Analytics Panel - inline in DepthView */
+.analytics-panel-container {
+  width: 200px;
+  min-width: 200px;
+  flex-shrink: 0;
+  background: #0a0a0a;
+  border-right: 1px solid #222;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Persistent Analytics Panel - for MainView (fixed positioning) */
+.persistent-analytics-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 100vh;
+  z-index: 50;
+  background: #0a0a0a;
+  border-right: 1px solid #222;
+  overflow-y: auto;
+}
+
+.persistent-analytics-panel.hidden {
+  display: none !important;
+}
+
+.persistent-analytics-panel.in-main-view {
+  display: block;
+}
+
+.footer {
+  background-color: black;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 0;
+  flex-shrink: 0;
+  min-height: 200px;
+  max-height: 360px;
+  height: 35vh;
+  border-top: 1px solid #333;
+  overflow: hidden;
+}
+
+.upper-panel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-right: 10px;
+}
+
+.upper-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 5px;
+}
+
+.alert-trigger-btn {
+  position: relative;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.alert-trigger-btn:hover {
+  background-color: #2a2a2a;
+  color: #c6fce1;
+  border-color: #26a69a;
+}
+
+.alert-trigger-btn .alert-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #ef5350;
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+.order-history-toggle-btn {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.order-history-toggle-btn:hover {
+  background-color: #2a2a2a;
+  color: #888;
+  border-color: #666;
+}
+
+.order-history-toggle-btn.active {
+  color: #26a69a;
+  border-color: #26a69a;
+  background-color: rgba(38, 166, 154, 0.1);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.offline-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: rgba(255, 152, 0, 0.2);
+  border: 1px solid #ff9800;
+  border-radius: 4px;
+  color: #ff9800;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.offline-indicator::before {
+  content: '⚡';
+}

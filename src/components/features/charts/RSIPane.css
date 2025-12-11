@@ -1,0 +1,185 @@
+/* RSI Pane Styles */
+
+.rsi-pane {
+    position: relative;
+    width: 100%;
+    background: #0f0f0f;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    min-height: 30px;
+    overflow: hidden;
+}
+
+.rsi-pane.compact {
+    background: #0a0a0a;
+    border-top: 1px solid #1a1a1a;
+}
+
+.rsi-pane.resizing {
+    user-select: none;
+}
+
+/* Resize handle at the top of RSI pane */
+.rsi-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background-color 0.15s ease;
+}
+
+.rsi-resize-handle:hover {
+    background: rgba(168, 85, 247, 0.1);
+}
+
+.rsi-pane.resizing .rsi-resize-handle {
+    background: rgba(168, 85, 247, 0.2);
+}
+
+.rsi-resize-handle-line {
+    width: 40px;
+    height: 3px;
+    background: #334155;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+}
+
+.rsi-resize-handle:hover .rsi-resize-handle-line {
+    width: 60px;
+    background: #a855f7;
+}
+
+.rsi-pane.resizing .rsi-resize-handle-line {
+    width: 80px;
+    background: #a855f7;
+}
+
+/* RSI label overlay */
+.rsi-label {
+    position: absolute;
+    top: 10px;
+    left: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #a855f7;
+    background: rgba(15, 15, 15, 0.8);
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 10;
+    pointer-events: none;
+    letter-spacing: 0.5px;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+.rsi-pane.compact .rsi-label {
+    font-size: 9px;
+    padding: 1px 4px;
+    top: 8px;
+    left: 4px;
+}
+
+/* Chart container */
+.rsi-chart-container {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    padding-top: 4px;
+}
+
+/* Compact mode adjustments for MiniChart */
+.rsi-pane.compact .rsi-chart-container {
+    padding-top: 2px;
+}
+
+/* Animation for height changes */
+.rsi-pane:not(.resizing) {
+    transition: height 0.1s ease-out;
+}
+
+/* Level line labels - styled by lightweight-charts but we can enhance */
+.rsi-pane :global(.tv-lightweight-charts) {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace !important;
+}
+
+/* Overbought/Oversold zone indicators (optional overlay) */
+.rsi-zone-indicator {
+    position: absolute;
+    right: 60px;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 1px 4px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.7;
+}
+
+.rsi-zone-indicator.overbought {
+    top: 15%;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.rsi-zone-indicator.oversold {
+    bottom: 15%;
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+}
+
+/* Hover state for the pane */
+.rsi-pane:hover .rsi-zone-indicator {
+    opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .rsi-label {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+    
+    .rsi-resize-handle-line {
+        width: 30px;
+    }
+    
+    .rsi-resize-handle:hover .rsi-resize-handle-line {
+        width: 40px;
+    }
+}
+
+/* Dark scrollbar for the pane area if needed */
+.rsi-pane::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.rsi-pane::-webkit-scrollbar-track {
+    background: #0f0f0f;
+}
+
+.rsi-pane::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+
+.rsi-pane::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* TradingView Logo Opacity */
+.rsi-chart-container a[href*="tradingview.com"] {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.rsi-chart-container a[href*="tradingview.com"]:hover {
+    opacity: 1;
+}

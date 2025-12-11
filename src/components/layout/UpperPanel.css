@@ -1,0 +1,41 @@
+.upper-panel {
+  padding: 5px 0 0 6px;
+  font-size: 13px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.interval-buttons {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.interval-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: transparent;
+  border: 1px solid rgba(198, 252, 225, 0.4);
+  color: #c6fce1;
+  text-align: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+
+.interval-button:hover {
+  background: rgba(198, 252, 225, 0.08);
+  border-color: rgba(198, 252, 225, 0.6);
+}
+
+.interval-button.active {
+  background: rgba(198, 252, 225, 0.15);
+  color: #53b987;
+  border-color: rgba(83, 185, 135, 0.6);
+}

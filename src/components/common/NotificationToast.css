@@ -1,0 +1,111 @@
+.notification-toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 380px;
+  pointer-events: none;
+}
+
+.notification-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: notification-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
+}
+
+.notification-toast:hover {
+  transform: translateX(-4px);
+  background: #222;
+  border-color: #444;
+}
+
+@keyframes notification-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notification-toast-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notification-toast-info .notification-toast-icon {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.notification-toast-success .notification-toast-icon {
+  background: rgba(38, 166, 154, 0.2);
+  color: #26a69a;
+}
+
+.notification-toast-warning .notification-toast-icon {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.notification-toast-error .notification-toast-icon {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef5350;
+}
+
+.notification-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-toast-message {
+  color: #f0f0f0;
+  font-size: 13px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.notification-toast-time {
+  color: #666;
+  font-size: 10px;
+  margin-top: 4px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+/* Border colors by type */
+.notification-toast-info {
+  border-left: 3px solid #3b82f6;
+}
+
+.notification-toast-success {
+  border-left: 3px solid #26a69a;
+}
+
+.notification-toast-warning {
+  border-left: 3px solid #ffc107;
+}
+
+.notification-toast-error {
+  border-left: 3px solid #ef5350;
+}

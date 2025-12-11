@@ -1,0 +1,144 @@
+/* Drawing Toolbar */
+.drawing-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  background-color: #1a1a1a;
+  border-right: 1px solid #333;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.drawing-toolbar-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawing-toolbar-separator {
+  width: 24px;
+  height: 1px;
+  background-color: #444;
+  margin: 6px 0;
+}
+
+.drawing-toolbar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawing-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drawing-tool-btn.with-label {
+  width: auto;
+  height: auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+.drawing-tool-btn .tool-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.drawing-tool-btn:hover {
+  background-color: #2a2a2a;
+  color: #c6fce1;
+  border-color: #444;
+}
+
+.drawing-tool-btn.active {
+  background-color: #26a69a;
+  color: #fff;
+  border-color: #26a69a;
+}
+
+.drawing-tool-btn.active .tool-label {
+  opacity: 1;
+}
+
+.drawing-tool-btn.delete {
+  color: #ef5350;
+}
+
+.drawing-tool-btn.delete:hover:not(.disabled) {
+  background-color: rgba(239, 83, 80, 0.2);
+  border-color: #ef5350;
+}
+
+.drawing-tool-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.drawing-tool-btn.disabled:hover {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+/* Color Picker Styles */
+.color-picker-container {
+  position: relative;
+}
+
+.drawing-tool-btn.color-btn {
+  color: #888;
+}
+
+.drawing-tool-btn.color-btn:hover {
+  color: #fff;
+}
+
+.color-picker-dropdown {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.color-option {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.color-option:hover {
+  transform: scale(1.15);
+  border-color: #fff;
+}
+
+.color-option.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
