@@ -348,14 +348,14 @@ const MainView = ({ onSwitchToDepth, onPairChange, onSelectedSlotChange, showAna
         }
 
         // Subscribe to new channels with staggered timing to avoid rate limits
-        // Binance allows ~5 new WS connections per second, we use 250ms delay
+        // Using 500ms delay to be conservative with Binance limits
         const subscribeWithDelay = async () => {
             for (let i = 0; i < newKeysNeeded.length; i++) {
                 const config = newKeysNeeded[i];
 
-                // Stagger subscriptions: wait 250ms between each (max 4/sec)
+                // Stagger subscriptions: wait 500ms between each (max 2/sec)
                 if (i > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 250));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
                 const channelId = createChannelId(CHANNEL_TYPES.MINI, config.symbol, config.interval);

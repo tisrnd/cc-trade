@@ -17,11 +17,41 @@
    - Account filters, balances, open orders, and personal trade history via REST.
    - Order placement/cancellation through signed REST endpoints.
 
+### Minimal WebSocket Architecture (Only 3 Sockets!)
+
+The service uses the absolute minimum number of WebSocket connections to Binance:
+
+| Socket | Stream(s) | Purpose |
+| --- | --- | --- |
+| `globalWsConnection` | `!ticker@arr` | 24h ticker updates for all symbols |
+| `userDataWsConnection` | `<listenKey>` | User data (orders, balances, execution reports) |
+| `marketWsConnection` | Combined streams | **ALL market data in ONE socket** (klines + trade + depth) |
+
+**Benefits:**
+- **Only 3 WebSocket connections total** regardless of how many charts you have
+- Compliant with Binance's connection limits (max 5 connections/second, 1024 streams/connection)
+- 2-second debounce batches all subscription changes during startup
+
+**How the Market Socket works:**
+1. Combines streams into one WebSocket based on what's needed:
+   - All kline streams for mini charts (e.g., `btcusdt@kline_1d`, `ethusdt@kline_4h`)
+   - **Trade + Depth streams ONLY when DepthView is active** (saves bandwidth on MainView!)
+2. Subscription changes are debounced (2 seconds) to batch them together
+3. Single message handler routes data by event type:
+   - `kline` events → routed to appropriate channel(s) by symbol/interval
+   - `trade` events → routed to detail channel (only when depth view enabled)
+   - `depthUpdate` events → routed to detail channel (only when depth view enabled)
+
+**Smart Stream Management:**
+- **MainView**: Only subscribes to klines (no trades/depth - minimal bandwidth)
+- **DepthView**: Subscribes to klines + trades + depth for the selected symbol
+- Frontend sends `enable_depth_view` / `disable_depth_view` actions when switching views
+
 ### Data Normalization
 
 - Chart payloads are converted to lightweight-charts friendly arrays (`[{ time, open, high, low, close, volume }]`), with `last_tick` matching the same shape.
 - `sendJSON()` guards against writing to a closed socket.
-- Live subscriptions are terminated when `panel.selected` changes; TODO: tie these to subscription IDs to avoid ghost updates (see `docs/channel_refactor.md` for the task list).
+- Channel subscriptions are managed by `ChannelManager` and `MarketStreamManager` to prevent ghost updates.
 
 ### Rate Limiting
 
@@ -53,6 +83,8 @@ The backend implements rate limiting to comply with Binance API restrictions:
 | --- | --- | --- |
 | Renderer → Service | `{ action: 'subscribe', channelId, channelType, symbol, interval }` | Subscribe to a channel (detail or mini). |
 | Renderer → Service | `{ action: 'unsubscribe', channelId }` | Unsubscribe from a channel. |
+| Renderer → Service | `{ action: 'enable_depth_view', symbol }` | Enable trade + depth streams (call when entering DepthView). |
+| Renderer → Service | `{ action: 'disable_depth_view' }` | Disable trade + depth streams (call when leaving DepthView). |
 | Renderer → Service | `{ action: 'order', type: 'buy'|'sell', symbol, price, quantity }` | Place an order. |
 | Renderer → Service | `{ action: 'cancelOrder', orderId, symbol }` | Cancel an order. |
 | Service → Renderer | `{ channelId, type: 'chart', symbol, interval, payload, extra }` | Chart data with channel metadata. |
@@ -75,7 +107,11 @@ The backend implements rate limiting to comply with Binance API restrictions:
 
 - Keep mock mode updated whenever new renderer features need additional data fields.
 - Prefer `async/await` + try/catch for new REST endpoints; legacy callback style can be refactored gradually.
-- If adding subscriptions, store their IDs so we can terminate them safely when pair switching is implemented.
+- When adding new streams, use `MarketStreamManager` to consolidate connections:
+  - For kline streams: `marketStreamManager.addKlineStream(channelId, symbol, interval)`
+  - For detail streams: `marketStreamManager.setDetailSymbol(symbol)`
+  - All streams are combined into ONE WebSocket connection
+- Channel cleanup is automatic when using `channelManager.removeChannel()` or `channelManager.cleanup()`.
 
 ## VPS Announcer & Analytics (`tele_announcer/server.js`)
 

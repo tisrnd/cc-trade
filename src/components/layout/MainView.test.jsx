@@ -170,10 +170,10 @@ describe('MainView', () => {
             })
         );
 
-        // Advance timers to allow staggered subscriptions (250ms each)
+        // Advance timers to allow staggered subscriptions (500ms each - rate limit conservative)
         await act(async () => {
             for (let i = 0; i < 7; i++) {
-                vi.advanceTimersByTime(250);
+                vi.advanceTimersByTime(500);
                 await Promise.resolve(); // Flush promises
             }
         });

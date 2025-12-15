@@ -3,6 +3,48 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { setupBinanceConnection } from './services/binance-connection.js'
 
+// ============================================================
+// Global error handlers to prevent crashes from network errors
+// ============================================================
+process.on('uncaughtException', (error) => {
+  const isNetworkError = error?.code === 'ECONNRESET' ||
+                         error?.code === 'ETIMEDOUT' ||
+                         error?.code === 'ENOTFOUND' ||
+                         error?.code === 'ECONNREFUSED' ||
+                         error?.code === 'EPIPE' ||
+                         error?.code === 'EAI_AGAIN' ||
+                         error?.message?.includes('socket disconnected') ||
+                         error?.message?.includes('TLS') ||
+                         error?.message?.includes('ECONNRESET');
+
+  if (isNetworkError) {
+    console.warn('[Electron] Network error caught (non-fatal):', error?.code || error?.message);
+  } else {
+    console.error('[Electron] Uncaught exception:', error);
+  }
+  // Don't exit - let the app continue running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  const isNetworkError = error?.code === 'ECONNRESET' ||
+                         error?.code === 'ETIMEDOUT' ||
+                         error?.code === 'ENOTFOUND' ||
+                         error?.code === 'ECONNREFUSED' ||
+                         error?.code === 'EPIPE' ||
+                         error?.code === 'EAI_AGAIN' ||
+                         error?.message?.includes('socket disconnected') ||
+                         error?.message?.includes('TLS') ||
+                         error?.message?.includes('ECONNRESET');
+
+  if (isNetworkError) {
+    console.warn('[Electron] Unhandled network error (non-fatal):', error?.code || error?.message);
+  } else {
+    console.error('[Electron] Unhandled rejection:', reason);
+  }
+  // Don't exit - let the app continue running
+});
+
 setupBinanceConnection();
 
 // Get proxy URL from environment (supports http_proxy, HTTP_PROXY, https_proxy, HTTPS_PROXY)

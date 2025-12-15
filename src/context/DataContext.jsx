@@ -1314,6 +1314,7 @@ export const DataProvider = ({ children }) => {
     subscribeChannel,
     unsubscribeChannel,
     sendWsMessage,
+    sendMessage: sendWsMessage,  // Alias for convenience
     activeDetailChannelId,
     // Mini charts data for MainView
     miniCharts,

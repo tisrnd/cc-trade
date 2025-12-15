@@ -91,14 +91,22 @@ const OrderBook = ({ callDialog }) => {
         }
     };
 
-    // Render Logic
-    if (
-        !depth ||
-        Object.keys(depth).length === 0 ||
-        Object.keys(filters || {}).length === 0 ||
-        (Object.keys(depth.asks || {}).length === 0 && Object.keys(depth.bids || {}).length === 0)
-    ) {
-        return <div className="ob"><div className="color-white">No data in orderBook</div></div>;
+    // Render Logic - check if we have depth data
+    const hasDepthData = depth && 
+        Object.keys(depth).length > 0 && 
+        (Object.keys(depth.asks || {}).length > 0 || Object.keys(depth.bids || {}).length > 0);
+    
+    const hasFilters = filters && Object.keys(filters).length > 0;
+
+    if (!hasDepthData || !hasFilters) {
+        return (
+            <div className="ob">
+                <div className="ob-loading">
+                    <div className="ob-spinner"></div>
+                    <span>Loading order book...</span>
+                </div>
+            </div>
+        );
     }
 
     const precision = calculatePrecision(filters?.[panel.selected] || {});

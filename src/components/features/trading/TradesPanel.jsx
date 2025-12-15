@@ -219,7 +219,13 @@ const TradesPanel = () => {
                     .map((order, index) => compoundOrder(order, precision, market, maxTotal, index, marketValueDecimals))
                     .filter(Boolean)
             } else {
-                feed = <div className="color-white">No trades</div>
+                // Show loading spinner while waiting for trades data
+                feed = (
+                    <div className="trades-loading">
+                        <div className="trades-spinner"></div>
+                        <span>Loading trades...</span>
+                    </div>
+                )
             }
             break
         case 'history':

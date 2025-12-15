@@ -10,7 +10,6 @@ import InfoPanel from './components/layout/InfoPanel'
 import AnalyticsPanel from './components/layout/AnalyticsPanel'
 import QuickSwitchModal from './components/features/tools/QuickSwitchModal'
 import DrawingToolbar from './components/features/tools/DrawingToolbar'
-import LoadingOverlay from './components/common/LoadingOverlay'
 import AlertPanel from './components/features/tools/AlertPanel'
 import MainView from './components/layout/MainView'
 import NotificationToast from './components/common/NotificationToast'
@@ -37,6 +36,7 @@ function AppShell() {
     wsConnection,
     filters,
     isOffline,
+    sendMessage,
   } = useDataContext();
   const { alerts, checkPriceAlerts, triggeredAlerts: _triggeredAlerts } = useAlertContext();
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -97,6 +97,21 @@ function AppShell() {
   useEffect(() => {
     localStorage.setItem('currentView', currentView);
   }, [currentView]);
+
+  // Enable/disable depth view streams based on current view
+  // Trade + depth streams are ONLY subscribed when user is actually viewing DepthView
+  // This reduces unnecessary WebSocket traffic when on MainView
+  useEffect(() => {
+    if (!sendMessage || !wsConnection) return;
+    
+    if (currentView === VIEWS.DEPTH && panel?.selected) {
+      // Enable trade + depth streams for DepthView
+      sendMessage({ action: 'enable_depth_view', symbol: panel.selected });
+    } else {
+      // Disable trade + depth streams when on MainView or no symbol selected
+      sendMessage({ action: 'disable_depth_view' });
+    }
+  }, [currentView, panel?.selected, sendMessage, wsConnection]);
 
   // Switch to depth view with specific symbol/interval (from MainView or AnalyticsPanel)
   // NOTE: When coming from MainView, the slot updater handles keeping the grid in sync
@@ -487,7 +502,7 @@ export default function App() {
         <AlertProvider>
           <DrawingProvider>
             <AppShell />
-            <LoadingOverlay />
+            {/* LoadingOverlay removed - charts load progressively */}
             <NotificationToast />
           </DrawingProvider>
         </AlertProvider>

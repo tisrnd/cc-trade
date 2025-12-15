@@ -94,14 +94,19 @@ const extractStreamPayload = (rawMessage) => {
  * Rate Limiter for Binance API calls
  * Binance limits: ~1200 weight per minute for REST API
  * We use a conservative limit to avoid hitting the cap
+ * 
+ * Key features:
+ * - 500ms hard-coded delay before each request (prevents burst)
+ * - Weight-based capacity check (800 weight per minute)
+ * - Automatic retry on network errors (ECONNRESET, etc.)
  */
 class RateLimiter {
-    constructor(maxWeight = 800, windowMs = 60000) {
-        this.maxWeight = maxWeight;      // Max weight per window (conservative)
-        this.windowMs = windowMs;        // Window size in ms (1 minute)
-        this.requests = [];              // Track { timestamp, weight }
-        this.queue = [];                 // Pending requests
-        this.processing = false;
+    constructor(maxWeight = 800, windowMs = 60000, requestDelayMs = 500) {
+        this.maxWeight = maxWeight;        // Max weight per window (conservative)
+        this.windowMs = windowMs;          // Window size in ms (1 minute)
+        this.requestDelayMs = requestDelayMs; // Hard-coded delay before each request
+        this.requests = [];                // Track { timestamp, weight }
+        this.lastRequestTime = 0;          // Last request timestamp for spacing
     }
 
     /**
@@ -145,33 +150,65 @@ class RateLimiter {
     }
 
     /**
-     * Execute a function with rate limiting
-     * @param {Function} fn - Async function to execute
-     * @param {number} weight - Weight of this request (default 1)
+     * Ensure minimum delay between requests
      */
-    async execute(fn, weight = 1) {
-        await this.waitForCapacity(weight);
-
-        this.requests.push({ timestamp: Date.now(), weight });
-
-        return await fn();
+    async enforceDelay() {
+        const now = Date.now();
+        const elapsed = now - this.lastRequestTime;
+        if (elapsed < this.requestDelayMs) {
+            await new Promise(resolve => setTimeout(resolve, this.requestDelayMs - elapsed));
+        }
+        this.lastRequestTime = Date.now();
     }
 
     /**
-     * Add a delay between requests (for WebSocket connections)
-     * @param {number} delayMs - Delay in milliseconds
+     * Execute a function with rate limiting
+     * @param {Function} fn - Async function to execute
+     * @param {number} weight - Weight of this request (default 1)
+     * @param {number} maxRetries - Max retries on network errors (default 2)
      */
-    async delay(delayMs = 100) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+    async execute(fn, weight = 1, maxRetries = 2) {
+        // Wait for capacity (weight-based)
+        await this.waitForCapacity(weight);
+        
+        // Enforce minimum delay between requests (500ms)
+        await this.enforceDelay();
+
+        this.requests.push({ timestamp: Date.now(), weight });
+
+        // Execute with retry on network errors
+        let lastError;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await fn();
+            } catch (err) {
+                lastError = err;
+                const isNetworkError = err?.code === 'ECONNRESET' || 
+                                       err?.code === 'ETIMEDOUT' ||
+                                       err?.code === 'ENOTFOUND' ||
+                                       err?.code === 'ECONNREFUSED' ||
+                                       err?.message?.includes('socket disconnected') ||
+                                       err?.message?.includes('network');
+                
+                if (isNetworkError && attempt < maxRetries) {
+                    const retryDelay = 1000 * (attempt + 1); // 1s, 2s, 3s
+                    logger.warn(`Network error (${err.code || 'unknown'}), retrying in ${retryDelay}ms (attempt ${attempt + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    continue;
+                }
+                throw err;
+            }
+        }
+        throw lastError;
     }
 }
 
-// Global rate limiter instance
-const rateLimiter = new RateLimiter(800, 60000); // 800 weight per minute (conservative)
+// Global rate limiter instance: 800 weight/min, 500ms delay between requests
+const rateLimiter = new RateLimiter(800, 60000, 500);
 
-// WebSocket connection throttle (max 5 new connections per second)
+// WebSocket connection throttle (500ms between new connections)
 let lastWsConnectionTime = 0;
-const WS_CONNECTION_MIN_INTERVAL = 200; // 200ms between new WS connections
+const WS_CONNECTION_MIN_INTERVAL = 500; // 500ms between new WS connections
 
 const throttleWsConnection = async () => {
     const now = Date.now();
@@ -455,7 +492,31 @@ export function setupBinanceConnection() {
             }
             delete restBaseOptions.headers['Content-Type'];
         }
+
+        // Suppress verbose axios logging from @binance/spot library
+        // The library logs "Axios Request Args" on every request - intercept and silence
+        const axiosInstance = client?.restAPI?.axiosInstance;
+        if (axiosInstance?.interceptors) {
+            axiosInstance.interceptors.request.use(
+                (config) => config, // Just pass through, don't log
+                (error) => Promise.reject(error)
+            );
+        }
     }
+
+    // Suppress @binance/spot verbose console output globally
+    // This library logs every axios request args to console
+    const originalConsoleLog = console.log;
+    console.log = (...args) => {
+        // Filter out "Axios Request Args" and similar verbose library output
+        const firstArg = args[0];
+        if (typeof firstArg === 'string' && 
+            (firstArg.includes('Axios Request Args') || 
+             firstArg.includes('Axios Response Data'))) {
+            return; // Suppress this log
+        }
+        originalConsoleLog.apply(console, args);
+    };
 
     const parsedPort = parseInt(process.env.WS_PORT || process.env.WEBSOCKET_PORT || process.env.VITE_WS_PORT || '14477', 10);
     const websocketServerPort = Number.isFinite(parsedPort) ? parsedPort : 14477;
@@ -473,21 +534,40 @@ export function setupBinanceConnection() {
         autoAcceptConnections: false
     });
 
+    // ============================================================
+    // SHARED state across all renderer connections
+    // These Binance sockets are created ONCE and shared by all renderers
+    // ============================================================
+    let globalWsConnection = null;      // Ticker stream (!ticker@arr)
+    let userDataWsConnection = null;    // User data stream (orders/balances)
+    let keepAliveInterval = null;
+    let globalSocketsInitialized = false;
+    const rendererConnections = new Set();  // Track all connected renderers
+
+    // Broadcast to all connected renderers
+    const broadcastToRenderers = (payload) => {
+        const message = JSON.stringify(payload);
+        for (const conn of rendererConnections) {
+            if (conn.connected) {
+                conn.sendUTF(message);
+            }
+        }
+    };
+
     wsServer.on("request", (request) => {
         logger.info("Connection from origin " + request.origin + ".");
         const connection = request.accept(null, request.origin);
         logger.info("Connection accepted.");
+        
+        // Track this renderer connection
+        rendererConnections.add(connection);
 
         let panelSettings = {};
         let activeRequestId = null;
 
-        // Channel manager for this connection
+        // Channel manager for this connection (each renderer has its own channels)
         const channelManager = new ChannelManager(logger);
-
-        // WebSocket connections for Binance (global streams, not per-channel)
-        let globalWsConnection = null;
-        let userDataWsConnection = null;
-        let keepAliveInterval = null;
+        const marketStreamManager = channelManager.getMarketStreamManager();
 
         const fetchBalances = async () => {
             if (!client) return;
@@ -750,84 +830,123 @@ export function setupBinanceConnection() {
             };
             void sendInitialTicker();
 
-            // 2. Subscribe to All Tickers Stream
-            const subscribeGlobal = async () => {
-                try {
-                    globalWsConnection = await client.websocketStreams.connect({
-                        stream: '!ticker@arr'
-                    });
+            // Initialize shared global sockets (ticker + user data) - ONLY ONCE
+            if (!globalSocketsInitialized) {
+                globalSocketsInitialized = true;
+                
+                // Subscribe to All Tickers Stream (shared by all renderers)
+                let globalWsReconnecting = false;
+                const subscribeGlobal = async (retryCount = 0) => {
+                    const MAX_RETRIES = 5;
+                    const RETRY_DELAY_BASE = 3000;
+                    
+                    if (globalWsReconnecting && retryCount === 0) return;
+                    globalWsReconnecting = true;
+                    
+                    try {
+                        await throttleWsConnection();
+                        globalWsConnection = await client.websocketStreams.connect({
+                            stream: '!ticker@arr'
+                        });
+                        globalWsReconnecting = false;
 
-                    globalWsConnection.on('message', (data) => {
-                        const payload = extractStreamPayload(data);
-                        if (!payload) return;
-                        const tickerArray = Array.isArray(payload)
-                            ? payload
-                            : payload?.e === '24hrTicker'
-                                ? [payload]
-                                : [];
-                        if (!tickerArray.length) return;
-                        tickerArray.forEach(ticker => {
-                            if (ticker?.s && (ticker.s.includes("BTC") || ticker.s.includes("USDT"))) {
-                                const update = {
-                                    symbol: ticker.s,
-                                    lastPrice: ticker.c,
-                                    priceChangePercent: ticker.P,
-                                    highPrice: ticker.h,
-                                    lowPrice: ticker.l,
-                                    quoteVolume: ticker.q,
-                                    closeTime: ticker.C
-                                };
-                                const upserted = tickerCache.upsert(update);
-                                if (upserted) {
-                                    sendJSON(connection, {
-                                        ticker_update: upserted.entry,
-                                        index: upserted.index
-                                    });
+                        globalWsConnection.on('message', (data) => {
+                            const payload = extractStreamPayload(data);
+                            if (!payload) return;
+                            const tickerArray = Array.isArray(payload)
+                                ? payload
+                                : payload?.e === '24hrTicker'
+                                    ? [payload]
+                                    : [];
+                            if (!tickerArray.length) return;
+                            tickerArray.forEach(ticker => {
+                                if (ticker?.s && (ticker.s.includes("BTC") || ticker.s.includes("USDT"))) {
+                                    const update = {
+                                        symbol: ticker.s,
+                                        lastPrice: ticker.c,
+                                        priceChangePercent: ticker.P,
+                                        highPrice: ticker.h,
+                                        lowPrice: ticker.l,
+                                        quoteVolume: ticker.q,
+                                        closeTime: ticker.C
+                                    };
+                                    const upserted = tickerCache.upsert(update);
+                                    if (upserted) {
+                                        // Broadcast to ALL connected renderers
+                                        broadcastToRenderers({
+                                            ticker_update: upserted.entry,
+                                            index: upserted.index
+                                        });
+                                    }
                                 }
+                            });
+                        });
+                        globalWsConnection.on('error', (err) => {
+                            const isNetworkError = err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' || 
+                                                   err?.message?.includes('socket disconnected');
+                            if (isNetworkError) {
+                                logger.warn(`Global WS network error (${err?.code}), will reconnect...`);
+                            } else {
+                                logger.error("Global WS Connection Error:", err?.code || err?.message);
                             }
                         });
-                    });
-                    globalWsConnection.on('error', (err) => {
-                        logger.error("Global WS Connection Error:", err);
-                    });
-                    globalWsConnection.on('close', (code, reason) => {
-                        const readableReason = typeof reason === 'string' ? reason : reason?.toString() ?? 'no reason supplied';
-                        logger.warn(`Global WS Connection closed (${code}): ${readableReason}`);
-                    });
-                } catch (err) {
-                    logger.error("Global WS Connection Error:", err);
-                }
-            };
-            subscribeGlobal();
+                        globalWsConnection.on('close', (code, reason) => {
+                            const readableReason = typeof reason === 'string' ? reason : reason?.toString() ?? 'no reason';
+                            logger.warn(`Global WS closed (${code}): ${readableReason}`);
+                            globalWsConnection = null;
+                            // Auto-reconnect on abnormal close if any renderer is connected
+                            if (code !== 1000 && rendererConnections.size > 0) {
+                                logger.info('Scheduling global WS reconnection...');
+                                setTimeout(() => subscribeGlobal(), 5000);
+                            }
+                        });
+                    } catch (err) {
+                        globalWsReconnecting = false;
+                        const isNetworkError = err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' ||
+                                               err?.code === 'ENOTFOUND' || err?.message?.includes('TLS');
+                        
+                        if (isNetworkError && retryCount < MAX_RETRIES && rendererConnections.size > 0) {
+                            const delay = RETRY_DELAY_BASE * (retryCount + 1);
+                            logger.warn(`Global WS connection failed (${err?.code}), retrying in ${delay}ms (${retryCount + 1}/${MAX_RETRIES})`);
+                            setTimeout(() => subscribeGlobal(retryCount + 1), delay);
+                        } else {
+                            logger.error("Global WS Connection Error:", err?.code || err?.message);
+                        }
+                    }
+                };
+                subscribeGlobal();
 
-            // 3. Subscribe to User Data Stream (Execution Reports & Balances)
-            const startUserDataStream = async () => {
-                try {
-                    logger.info("Starting User Data Stream setup...");
+                // Subscribe to User Data Stream (shared by all renderers)
+                let userDataReconnecting = false;
+                const startUserDataStream = async (retryCount = 0) => {
+                    const MAX_RETRIES = 5;
+                    const RETRY_DELAY_BASE = 3000;
+                    
+                    if (userDataReconnecting && retryCount === 0) return;
+                    userDataReconnecting = true;
+                    
+                    try {
+                        logger.info("Starting User Data Stream setup...");
 
-                    // Inspect client methods to ensure we are using the right ones
-                    // logger.info("Client keys:", Object.keys(client)); 
-                    // logger.info("WS keys:", Object.keys(client.websocketStreams));
-
-                    // Use generic sendRequest since createListenKey is not exposed in this version
-                    const response = await client.restAPI.sendRequest('/api/v3/userDataStream', 'POST');
-                    const data = await response.data();
-                    logger.info("Listen Key Response:", data);
+                        const response = await rateLimiter.execute(
+                            () => client.restAPI.sendRequest('/api/v3/userDataStream', 'POST'),
+                            1
+                        );
+                        const data = await response.data();
 
                     const listenKey = data?.listenKey;
                     if (!listenKey) {
                         logger.error("Failed to obtain listenKey");
+                        userDataReconnecting = false;
                         return;
                     }
                     logger.info("Listen Key obtained successfully.");
 
-                    // Try using the generic connect with the listenKey as the stream name, 
-                    // which is often how these wrappers work for user streams if no dedicated method exists.
-                    // Or check if we should use a specific method.
-
+                    await throttleWsConnection();
                     userDataWsConnection = await client.websocketStreams.connect({
                         stream: listenKey
                     });
+                    userDataReconnecting = false;
 
                     logger.info("User Data Stream connected.");
 
@@ -838,42 +957,132 @@ export function setupBinanceConnection() {
                         if (payload.e === 'executionReport') {
                             const report = normalizeExecutionReport(payload);
                             logger.info(`[stream] Execution Report: ${report.symbol} ${report.side} ${report.status}`);
-                            emit({ execution_update: report });
-                            // Also refresh account state to be safe, though the report should be enough for UI
-                            // refreshAccountState(report.symbol); 
+                            // Broadcast to ALL connected renderers
+                            broadcastToRenderers({ execution_update: report });
                         } else if (payload.e === 'outboundAccountPosition') {
-                            emit({ balance_update: payload });
+                            broadcastToRenderers({ balance_update: payload });
                         }
                     });
 
                     userDataWsConnection.on('error', (err) => {
-                        logger.error("User Data Stream Error:", err);
+                        const isNetworkError = err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' ||
+                                               err?.message?.includes('socket disconnected');
+                        if (isNetworkError) {
+                            logger.warn(`User Data Stream network error (${err?.code}), will reconnect...`);
+                        } else {
+                            logger.error("User Data Stream Error:", err?.code || err?.message);
+                        }
                     });
 
                     userDataWsConnection.on('close', () => {
                         logger.warn("User Data Stream closed");
                         if (keepAliveInterval) clearInterval(keepAliveInterval);
+                        userDataWsConnection = null;
+                        // Auto-reconnect on unexpected close if any renderer connected
+                        if (rendererConnections.size > 0) {
+                            logger.info('Scheduling User Data Stream reconnection...');
+                            setTimeout(() => startUserDataStream(), 5000);
+                        }
                     });
 
                     // Keep-alive every 30 minutes
                     keepAliveInterval = setInterval(async () => {
                         try {
-                            await client.restAPI.sendRequest('/api/v3/userDataStream', 'PUT', { listenKey });
-                            logger.info("Renewed listenKey");
+                            await rateLimiter.execute(
+                                () => client.restAPI.sendRequest('/api/v3/userDataStream', 'PUT', { listenKey }),
+                                1
+                            );
+                            logger.debug("Renewed listenKey");
                         } catch (err) {
-                            logger.error("Failed to renew listenKey:", err);
+                            logger.warn("Failed to renew listenKey:", err?.code || err?.message);
                         }
                     }, 30 * 60 * 1000);
 
                 } catch (err) {
-                    logger.error("Failed to start User Data Stream:", err);
+                    userDataReconnecting = false;
+                    const isNetworkError = err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' ||
+                                           err?.code === 'ENOTFOUND' || err?.message?.includes('TLS');
+                    
+                    if (isNetworkError && retryCount < MAX_RETRIES && rendererConnections.size > 0) {
+                        const delay = RETRY_DELAY_BASE * (retryCount + 1);
+                        logger.warn(`User Data Stream connection failed (${err?.code}), retrying in ${delay}ms (${retryCount + 1}/${MAX_RETRIES})`);
+                        setTimeout(() => startUserDataStream(retryCount + 1), delay);
+                    } else {
+                        logger.error("Failed to start User Data Stream:", err?.code || err?.message);
+                    }
                 }
-            };
-            startUserDataStream();
+                };
+                startUserDataStream();
+            } // End of globalSocketsInitialized block
+
+            // Initialize MarketStreamManager for consolidated WebSocket connections
+            marketStreamManager.setConnectFunction(async (params) => {
+                await throttleWsConnection();
+                return client.websocketStreams.connect(params);
+            });
+
+            // Set up single message handler for all market data (klines + trades + depth)
+            marketStreamManager.setMessageHandler((data) => {
+                const payload = extractStreamPayload(data);
+                if (!payload || typeof payload !== 'object') return;
+
+                const eventType = payload.e;
+
+                // Handle kline events - route to appropriate channels
+                if (eventType === 'kline') {
+                    const kline = payload.k;
+                    if (!kline) return;
+
+                    const symbol = kline.s;
+                    const interval = kline.i;
+                    const streamName = marketStreamManager.getKlineStreamName(symbol, interval);
+
+                    // Find all channels subscribed to this stream
+                    const subscribers = marketStreamManager.klineStreams.get(streamName);
+                    if (subscribers && subscribers.size > 0) {
+                        const normalized = normalizeStreamCandle(kline);
+                        for (const channelId of subscribers) {
+                            const channel = channelManager.getChannel(channelId);
+                            if (channel && channel.symbol === symbol && channel.interval === interval) {
+                                emitToChannel(channelId, 'chart', [normalized], normalized);
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                // Handle trade/depth events - route to detail channel
+                const detailChannel = channelManager.getDetailChannel();
+                if (!detailChannel) return;
+
+                const symbol = detailChannel.symbol;
+
+                if (eventType === 'trade' && payload.s === symbol) {
+                    const trade = {
+                        time: payload.T,
+                        price: payload.p,
+                        qty: payload.q,
+                        p: payload.p,
+                        q: payload.q,
+                        isBuyerMaker: payload.m,
+                        s: payload.s
+                    };
+                    emitToChannel(detailChannel.id, 'trades', trade);
+                }
+
+                if (eventType === 'depthUpdate' && payload.s === symbol) {
+                    detailChannel.depthCache.update(payload);
+                    emitToChannel(detailChannel.id, 'depth', detailChannel.depthCache.getFormatted());
+                }
+            });
         }
 
         /**
          * Subscribe to a channel (detail or mini)
+         * Uses consolidated WebSocket connections:
+         * - Klines: Single socket for all kline streams
+         * - Trade+Depth: Single socket for the active detail symbol
+         * 
          * @param {string} channelId 
          * @param {string} channelType 
          * @param {string} symbol 
@@ -886,7 +1095,9 @@ export function setupBinanceConnection() {
             if (isDetail) {
                 const existingDetail = channelManager.getDetailChannel();
                 if (existingDetail && existingDetail.id !== channelId) {
-                    await channelManager.removeChannel(existingDetail.id, safeDisconnect);
+                    // Remove old detail channel kline streams
+                    marketStreamManager.removeChannelStreams(existingDetail.id);
+                    await channelManager.removeChannel(existingDetail.id, null);
                 }
             }
 
@@ -986,72 +1197,15 @@ export function setupBinanceConnection() {
             // Execute REST fetches concurrently (rate-limited)
             Promise.allSettled(fetchPromises);
 
-            // Subscribe to WebSocket Streams (throttled to prevent connection spam)
-            try {
-                // Throttle WebSocket connections (max 5 per second per Binance limits)
-                await throttleWsConnection();
+            // Subscribe to consolidated WebSocket Streams (all in ONE socket)
+            // Add kline stream for this channel
+            marketStreamManager.addKlineStream(channelId, symbol, interval);
 
-                const streams = isDetail
-                    ? [
-                        `${symbol.toLowerCase()}@kline_${interval}`,
-                        `${symbol.toLowerCase()}@trade`,
-                        `${symbol.toLowerCase()}@depth@100ms`
-                    ]
-                    : [
-                        `${symbol.toLowerCase()}@kline_${interval}` // Mini channels only get klines
-                    ];
-
-                const wsConnection = await client.websocketStreams.connect({ stream: streams });
-                channelManager.setChannelConnection(channelId, wsConnection);
-
-                wsConnection.on('message', (data) => {
-                    const payload = extractStreamPayload(data);
-                    if (!payload || typeof payload !== 'object') return;
-
-                    // Verify channel still exists (might have been removed)
-                    const currentChannel = channelManager.getChannel(channelId);
-                    if (!currentChannel) return;
-
-                    const eventType = payload.e;
-
-                    if (eventType === 'kline') {
-                        const kline = payload.k;
-                        if (kline?.s === symbol && kline?.i === interval) {
-                            const normalized = normalizeStreamCandle(kline);
-                            emitToChannel(channelId, 'chart', [normalized], normalized);
-                        }
-                    }
-
-                    if (isDetail && eventType === 'trade' && payload.s === symbol) {
-                        const trade = {
-                            time: payload.T,
-                            price: payload.p,
-                            qty: payload.q,
-                            p: payload.p,
-                            q: payload.q,
-                            isBuyerMaker: payload.m,
-                            s: payload.s
-                        };
-                        emitToChannel(channelId, 'trades', trade);
-                    }
-
-                    if (isDetail && eventType === 'depthUpdate' && payload.s === symbol) {
-                        currentChannel.depthCache.update(payload);
-                        emitToChannel(channelId, 'depth', currentChannel.depthCache.getFormatted());
-                    }
-                });
-
-                wsConnection.on('error', (err) => {
-                    logger.error(`Channel ${channelId} WS error:`, err);
-                });
-
-                wsConnection.on('close', (code, reason) => {
-                    const readableReason = typeof reason === 'string' ? reason : reason?.toString() ?? 'no reason supplied';
-                    logger.warn(`Channel ${channelId} WS closed (${code}): ${readableReason}`);
-                });
-
-            } catch (err) {
-                logger.error(`Channel ${channelId} WS Connection Error:`, err);
+            // For detail channels, set the detail symbol (kline tracking only)
+            // NOTE: Trade + depth streams are NOT auto-subscribed!
+            // Frontend must explicitly call enable_depth_view when entering DepthView
+            if (isDetail) {
+                marketStreamManager.setDetailSymbol(symbol);
             }
         };
 
@@ -1060,7 +1214,19 @@ export function setupBinanceConnection() {
          * @param {string} channelId 
          */
         const unsubscribeChannel = async (channelId) => {
-            await channelManager.removeChannel(channelId, safeDisconnect);
+            const channel = channelManager.getChannel(channelId);
+            if (channel) {
+                // Remove kline stream subscription
+                marketStreamManager.removeKlineStream(channelId, channel.symbol, channel.interval);
+                
+                // If this was a detail channel, clear detail symbol
+                if (channel.type === CHANNEL_TYPES.DETAIL) {
+                    marketStreamManager.clearDetailSymbol();
+                }
+            }
+            
+            // Remove channel from manager
+            await channelManager.removeChannel(channelId, null);
         };
 
         connection.on("message", async (message) => {
@@ -1086,6 +1252,24 @@ export function setupBinanceConnection() {
                             return;
                         }
                         await unsubscribeChannel(channelId);
+                        break;
+                    }
+                    case 'enable_depth_view': {
+                        // Enable trade + depth streams for DepthView
+                        // Only call this when user actually opens DepthView
+                        const { symbol } = data;
+                        if (!symbol) {
+                            logger.warn('Invalid enable_depth_view request: missing symbol');
+                            return;
+                        }
+                        logger.info(`[DepthView] Enabling trade + depth streams for: ${symbol}`);
+                        marketStreamManager.enableDepthView(symbol);
+                        break;
+                    }
+                    case 'disable_depth_view': {
+                        // Disable trade + depth streams when leaving DepthView
+                        logger.info('[DepthView] Disabling trade + depth streams');
+                        marketStreamManager.disableDepthView();
                         break;
                     }
                     case 'order': {
@@ -1146,21 +1330,29 @@ export function setupBinanceConnection() {
         connection.on("close", () => {
             logger.info("Peer " + connection.remoteAddress + " disconnected.");
 
-            // Cleanup all channels
+            // Remove this renderer from tracking
+            rendererConnections.delete(connection);
+
+            // Cleanup this renderer's channels (market socket per-renderer)
             void channelManager.cleanup(safeDisconnect);
 
-            // Cleanup global streams
-            if (globalWsConnection) {
-                void safeDisconnect(globalWsConnection, 'global stream');
-                globalWsConnection = null;
-            }
-            if (userDataWsConnection) {
-                void safeDisconnect(userDataWsConnection, 'user data stream');
-                userDataWsConnection = null;
-            }
-            if (keepAliveInterval) {
-                clearInterval(keepAliveInterval);
-                keepAliveInterval = null;
+            // Only cleanup shared global sockets when ALL renderers disconnect
+            if (rendererConnections.size === 0) {
+                logger.info("All renderers disconnected, cleaning up shared sockets...");
+                globalSocketsInitialized = false;
+                
+                if (globalWsConnection) {
+                    void safeDisconnect(globalWsConnection, 'global stream');
+                    globalWsConnection = null;
+                }
+                if (userDataWsConnection) {
+                    void safeDisconnect(userDataWsConnection, 'user data stream');
+                    userDataWsConnection = null;
+                }
+                if (keepAliveInterval) {
+                    clearInterval(keepAliveInterval);
+                    keepAliveInterval = null;
+                }
             }
         });
     });
