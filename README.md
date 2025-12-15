@@ -25,7 +25,7 @@ A modern cryptocurrency trading terminal built with React, Vite, and Electron. F
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-org>/cc-trade.git
+git clone https://github.com/tisovy/cc-trade.git
 cd cc-trade
 
 # Install dependencies
